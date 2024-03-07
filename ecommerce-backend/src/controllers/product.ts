@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { TryCatch } from "../middleware/error.js";
-import { newProductRequestBody } from "../types/types.js";
+import { BaseQuery, SearchRequestQuery, newProductRequestBody } from "../types/types.js";
 import { Product } from "../models/product.js";
 import ErrorHandler from "../utils/utility-class.js";
 import { rm } from "fs";
@@ -102,10 +102,10 @@ export const getLatestProduct=TryCatch(async(req,res,next)=>{
         if(!product) return next(new ErrorHandler("Product not found",404));
 
         rm(product.photo!,()=>{
-            console.log("Product Photo Deleted");
-        })
+            console.log("Product Photo Deleted")
+        });
 
-        await Product.deleteOne({product});
+        await Product.deleteOne({_id:id});
 
         res.status(200).json({
             success:true,
@@ -113,3 +113,40 @@ export const getLatestProduct=TryCatch(async(req,res,next)=>{
         })
 
     })
+
+    export const getAllProducts=TryCatch(async(req:Request<{},{},{},SearchRequestQuery>,res,next)=>{
+ 
+
+        const {search,sort,category,price} =req.query;
+        const page=Number(req.query.page) || 1;
+        const limit=Number(process.env.PRODUCT_PER_PAGE) || 8 ;
+        const skip = limit * (page-1);
+
+        const baseQuery:BaseQuery = {} ;
+
+        if(search)
+            baseQuery.name = {
+                $regex:search,
+                $options:"i",
+            };
+        if(price) baseQuery.price= {
+            $lte:Number(price),
+        };
+
+        if(category) baseQuery.category = category;
+        
+        const productPromise =await Product.find(baseQuery).sort(sort && {price:sort === "asc"?1:-1}).limit(limit).skip(skip);
+        const [products,filteredOnlyProject] =await Promise.all([
+            productPromise,
+            Product.find(baseQuery),
+        ]);
+
+        const totalPage = Math.ceil(filteredOnlyProject.length / limit);
+
+        if(!products) return next(new ErrorHandler("product not found",400));
+        return res.status(200).json({
+            success:true,
+            products,
+            totalPage,
+        });
+    });

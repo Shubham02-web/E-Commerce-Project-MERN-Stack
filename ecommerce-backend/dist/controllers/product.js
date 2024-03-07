@@ -90,9 +90,40 @@ export const deleteProduct = TryCatch(async (req, res, next) => {
     rm(product.photo, () => {
         console.log("Product Photo Deleted");
     });
-    await Product.deleteOne({ product });
+    await Product.deleteOne({ _id: id });
     res.status(200).json({
         success: true,
         message: "Product Deleted Successfully",
+    });
+});
+export const getAllProducts = TryCatch(async (req, res, next) => {
+    const { search, sort, category, price } = req.query;
+    const page = Number(req.query.page) || 1;
+    const limit = Number(process.env.PRODUCT_PER_PAGE) || 8;
+    const skip = limit * (page - 1);
+    const baseQuery = {};
+    if (search)
+        baseQuery.name = {
+            $regex: search,
+            $options: "i",
+        };
+    if (price)
+        baseQuery.price = {
+            $lte: Number(price),
+        };
+    if (category)
+        baseQuery.category = category;
+    const productPromise = await Product.find(baseQuery).sort(sort && { price: sort === "asc" ? 1 : -1 }).limit(limit).skip(skip);
+    const [products, filteredOnlyProject] = await Promise.all([
+        productPromise,
+        Product.find(baseQuery),
+    ]);
+    const totalPage = Math.ceil(filteredOnlyProject.length / limit);
+    if (!products)
+        return next(new ErrorHandler("product not found", 400));
+    return res.status(200).json({
+        success: true,
+        products,
+        totalPage,
     });
 });
