@@ -4,6 +4,10 @@ import { BaseQuery, SearchRequestQuery, newProductRequestBody } from "../types/t
 import { Product } from "../models/product.js";
 import ErrorHandler from "../utils/utility-class.js";
 import { rm } from "fs";
+import { faker } from "@faker-js/faker";
+import { count } from "console";
+import { myCache } from "../app.js";
+import { json } from "stream/consumers";
 
 export const newProduct=TryCatch(async(req:Request<{},{},newProductRequestBody>,res:Response,next:NextFunction)=>{
 const {name,price,stock,category} = req.body;
@@ -31,34 +35,66 @@ return res.status(201).json({
     message:"Product created Successfully",
 })
 });
+
+
+// revalidate on New,Update,Delete Product & on new Order
 export const getLatestProduct=TryCatch(async(req,res,next)=>{
+    let products;
+    if(myCache.has("latest-product"))
     
-    const products = await Product.find({}).sort({createdAt:-1}).limit(10);
+    products =JSON.parse(myCache.get("latest-product") as string);
+    
+    else{
+     products = await Product.find({}).sort({createdAt:-1}).limit(10);
+    myCache.set("latest-product",JSON.stringify(products));
+    }
     return res.status(200).json({
         success:true,
         products,
     })
     });
 
+    // revalidate on New,Update,Delete Product & on new Order
     export const getAllCategories=TryCatch(async(req,res,next)=>{
-    const categories = await Product.distinct("category");
-        return res.status(200).json({
+        let categories;
+        if(myCache.has("categories"))
+        categories = JSON.parse(myCache.get("categories") as string);
+        else
+     {
+        categories = await Product.distinct("category");
+        myCache.set("categories",JSON.stringify(categories));
+    }
+     return res.status(200).json({
             success:true,
            categories ,
         })
         });
         
+        // revalidate on New,Update,Delete Product & on new Order
+
     export const getAdminProducts=TryCatch(async(req,res,next)=>{
-        const AllProducts = await Product.find({});
-        return res.status(200).json({
+        let AllProducts;
+        if(myCache.has("AllProducts"))
+        AllProducts = JSON.parse(myCache.get("AllProducts") as string);
+    else{
+         AllProducts = await Product.find({});
+         myCache.set("AllProducts",JSON.stringify(AllProducts));
+        }
+    return res.status(200).json({
             success:true,
             AllProducts,
         });
     });
 
     export const getSingleProducts=TryCatch(async(req,res,next)=>{
-        const product = await Product.findById(req.params.id);
-
+        let product;
+        const id= req.params.id;
+        if(myCache.has(`proudct-${id}`))
+        product = JSON.stringify(myCache.get(`proudct-${id}`)as string)
+        else{
+         product = await Product.findById(id);
+         myCache.set(`proudct-${id}`,JSON.stringify(product));
+        }
         if(!product) return next(new ErrorHandler("Product Not Found",404));
 
         return res.status(200).json({
@@ -135,7 +171,7 @@ export const getLatestProduct=TryCatch(async(req,res,next)=>{
 
         if(category) baseQuery.category = category;
         
-        const productPromise =await Product.find(baseQuery).sort(sort && {price:sort === "asc"?1:-1}).limit(limit).skip(skip);
+        const productPromise =await Product.find(baseQuery).sort(sort && {price:sort === "asc" ? 1 : -1}).limit(limit).skip(skip);
         const [products,filteredOnlyProject] =await Promise.all([
             productPromise,
             Product.find(baseQuery),
@@ -150,3 +186,38 @@ export const getLatestProduct=TryCatch(async(req,res,next)=>{
             totalPage,
         });
     });
+
+
+    // const generateRandomProducts = async(count:number = 10) =>{
+        // const products = [];
+
+        // for (let i=0;i<count;i++){
+            // const product = {
+                // name:faker.commerce.productName(),
+                // photo:"uploads\\71d2a743-4ecd-4bd8-94bd-9a7a625314f0.jpg",
+                // price:faker.commerce.price({min : 1500,max:80000,dec:0}),
+                // stock:faker.commerce.price({min:0,max:100,dec:0}),
+                // category:faker.commerce.department(),
+                // createdAt:new Date(faker.date.past()),
+                // updatedAt:new Date(faker.date.recent()),
+                // __v:0,
+
+            // };
+            // products.push(product);
+        // }
+        // await Product.create(products);
+        // console.log({success:true});
+    // };
+ 
+
+    // function to delete all fake products
+
+    // const deleteRandomProduct = async(count:number = 10 )=>{
+        // const products =await Product.find({}).skip(2);
+
+        // for (let i=0;i<products.length;i++){
+            // const product=products[i];
+            // await product.deleteOne();
+        // }
+        // console.log({success:true});
+    // }
