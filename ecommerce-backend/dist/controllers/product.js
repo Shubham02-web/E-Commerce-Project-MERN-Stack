@@ -48,15 +48,16 @@ export const getAdminProducts = TryCatch(async (req, res, next) => {
 });
 export const getSingleProducts = TryCatch(async (req, res, next) => {
     let product;
-    const id = req.params.id;
+    const { id } = req.params;
     if (myCache.has(`proudct-${id}`))
         product = JSON.stringify(myCache.get(`proudct-${id}`));
     else {
         product = await Product.findById(id);
+        if (!product)
+            return next(new ErrorHandler("Product Not Found", 404));
         myCache.set(`proudct-${id}`, JSON.stringify(product));
     }
-    if (!product)
-        return next(new ErrorHandler("Product Not Found", 404));
+    console.log(product);
     return res.status(200).json({
         success: true,
         product,
@@ -108,22 +109,22 @@ export const updateProduct = TryCatch(async (req, res, next) => {
     if (category)
         product.category = category;
     await product.save();
-    await InvalidateCache({ product: true });
+    await InvalidateCache({ product: true, productId: String(product._id) });
     return res.status(200).json({
         success: true,
         message: "Product Updated Successfully",
     });
 });
 export const deleteProduct = TryCatch(async (req, res, next) => {
-    const id = req.params.id;
+    const { id } = req.params;
     const product = await Product.findById(id);
     if (!product)
         return next(new ErrorHandler("Product not found", 404));
     rm(product.photo, () => {
         console.log("Product Photo Deleted");
     });
+    await InvalidateCache({ product: true, productId: String(product._id) });
     await Product.deleteOne({ _id: id });
-    await InvalidateCache({ product: true });
     res.status(200).json({
         success: true,
         message: "Product Deleted Successfully",
