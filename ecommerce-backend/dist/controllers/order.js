@@ -51,12 +51,7 @@ export const getSingleOrder = TryCatch(async (req, res, next) => {
 });
 export const newOrder = TryCatch(async (req, res, next) => {
     const { ShipingInfo, orderItems, user, subtotal, tax, shippingCharges, discount, total, } = req.body;
-    if (!ShipingInfo
-        || !orderItems
-        || !user
-        || !subtotal
-        || !tax
-        || !total)
+    if (!ShipingInfo || !orderItems || !user || !subtotal || !tax || !total)
         return next(new ErrorHandler("Please Enter All Fields", 400));
     const order = await Order.create({
         ShipingInfo,
@@ -69,7 +64,13 @@ export const newOrder = TryCatch(async (req, res, next) => {
         total,
     });
     await reduceStock(orderItems);
-    await InvalidateCache({ product: true, order: true, admin: true, userId: user, productId: order.orderItems.map((i) => String(i.productId)) });
+    InvalidateCache({
+        product: true,
+        order: true,
+        admin: true,
+        userId: user,
+        productId: order.orderItems.map((i) => String(i.productId)),
+    });
     return res.status(201).json({
         success: true,
         message: "Order Placed Succesfully",
@@ -92,7 +93,13 @@ export const processOrder = TryCatch(async (req, res, next) => {
             break;
     }
     await order.save();
-    await InvalidateCache({ product: false, order: true, admin: true, userId: order.user, orderId: String(order._id) });
+    InvalidateCache({
+        product: false,
+        order: true,
+        admin: true,
+        userId: order.user,
+        orderId: String(order._id),
+    });
     res.status(200).json({
         success: true,
         message: "order Processed successfully",
@@ -104,7 +111,13 @@ export const deleteOrder = TryCatch(async (req, res, next) => {
     if (!order)
         return next(new ErrorHandler("Product not found", 404));
     await order.deleteOne();
-    await InvalidateCache({ product: false, order: true, admin: true, userId: order.user, orderId: String(order._id) });
+    InvalidateCache({
+        product: false,
+        order: true,
+        admin: true,
+        userId: order.user,
+        orderId: String(order._id),
+    });
     res.status(200).json({
         success: true,
         message: "order Delete successfully",

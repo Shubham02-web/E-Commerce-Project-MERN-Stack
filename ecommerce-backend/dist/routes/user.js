@@ -1,5 +1,5 @@
 import express from "express";
-import { deleteUser, getAllUsers, getUser, newUser } from "../controllers/user.js";
+import { deleteUser, getAllUsers, getUser, newUser, } from "../controllers/user.js";
 import { adminOnly } from "../middleware/auth.js";
 const app = express.Router();
 // route /api/v1/user/new

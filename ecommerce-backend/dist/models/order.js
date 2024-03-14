@@ -54,7 +54,8 @@ const OrderSchema = new mongoose.Schema({
         enum: ["Proccessing", "Shipped", "Deliverd"],
         default: "Proccessing",
     },
-    orderItems: [{
+    orderItems: [
+        {
             name: String,
             photo: String,
             price: Number,
@@ -62,8 +63,9 @@ const OrderSchema = new mongoose.Schema({
             productId: {
                 type: mongoose.Types.ObjectId,
                 ref: "Product",
-            }
-        }],
+            },
+        },
+    ],
 }, {
     timestamps: true,
 });

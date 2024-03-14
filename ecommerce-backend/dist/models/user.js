@@ -32,7 +32,7 @@ const schema = new mongoose.Schema({
     dob: {
         type: Date,
         required: [true, "please enter Date Of Birth"],
-    }
+    },
 }, {
     timestamps: true,
 });

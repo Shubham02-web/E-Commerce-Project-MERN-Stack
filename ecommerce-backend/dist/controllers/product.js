@@ -81,7 +81,7 @@ export const newProduct = TryCatch(async (req, res, next) => {
         category: category.toLowerCase(),
         photo: photo?.path,
     });
-    await InvalidateCache({ product: true });
+    InvalidateCache({ product: true, admin: true });
     return res.status(201).json({
         success: true,
         message: "Product created Successfully",
@@ -109,7 +109,11 @@ export const updateProduct = TryCatch(async (req, res, next) => {
     if (category)
         product.category = category;
     await product.save();
-    await InvalidateCache({ product: true, productId: String(product._id) });
+    InvalidateCache({
+        product: true,
+        productId: String(product._id),
+        admin: true,
+    });
     return res.status(200).json({
         success: true,
         message: "Product Updated Successfully",
@@ -123,7 +127,11 @@ export const deleteProduct = TryCatch(async (req, res, next) => {
     rm(product.photo, () => {
         console.log("Product Photo Deleted");
     });
-    await InvalidateCache({ product: true, productId: String(product._id) });
+    InvalidateCache({
+        product: true,
+        productId: String(product._id),
+        admin: true,
+    });
     await Product.deleteOne({ _id: id });
     res.status(200).json({
         success: true,
@@ -147,7 +155,10 @@ export const getAllProducts = TryCatch(async (req, res, next) => {
         };
     if (category)
         baseQuery.category = category;
-    const productPromise = await Product.find(baseQuery).sort(sort && { price: sort === "asc" ? 1 : -1 }).limit(limit).skip(skip);
+    const productPromise = await Product.find(baseQuery)
+        .sort(sort && { price: sort === "asc" ? 1 : -1 })
+        .limit(limit)
+        .skip(skip);
     const [products, filteredOnlyProject] = await Promise.all([
         productPromise,
         Product.find(baseQuery),
